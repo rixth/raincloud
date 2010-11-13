@@ -7,4 +7,6 @@ Requirements
 -------------
 
     npm install express
+    npm install jade
+    npm install less
     npm install mongoose

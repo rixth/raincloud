@@ -17,8 +17,8 @@ var express = require('express'),
     db = mongoose.connect('mongodb://' + config.mongo.host + '/' + config.mongo.database),
     sys = require('sys');    
 
-mongoose.model('File', {
-  properties: ['key', 'name', 'type', 'views', 's3_url', 'created_at', 'updated_at'],
+mongoose.model('Item', {
+  properties: ['key', 'name', 'type', 'views', 'remote_url', 'created_at', 'updated_at'],
   cast: {
     views: Number,
     created_at: Date,
@@ -35,6 +35,9 @@ mongoose.model('File', {
     },
     contentUrl: function () {
       return 'http://' + config.raincloudHost + '/' + this.key + '/content'; 
+    },
+    remoteUrl: function () {
+      return this.remote_url;
     },
     icon: function () {
       return 'http://my.cl.ly/images/item_types/' + this.type + '.png'
@@ -95,8 +98,8 @@ app.get('/', function(req, res){
   });
 });
 
-app.get('/items', function(req, res){
-  db.model('File').find().all(function (results) {
+app.get('/items', function (req, res) {
+  db.model('Item').find().all(function (results) {
     var returnData = [];
     
     results.forEach(function (result) {
@@ -108,24 +111,50 @@ app.get('/items', function(req, res){
   });
 });
 
-app.post('/items', function(req, res){
+app.post('/items', function (req, res){
     res.send('create bookmark');
 });
 
-app.get('/items/new', function(req, res){
+app.get('/items/new', function (req, res){
     res.send('new item data');
 });
 
-app.delete('/items', function(req, res){
+app.delete('/items', function (req, res){
     res.send('get data');
 });
 
-app.get('/items', function(req, res){
+app.get('/items', function (req, res){
     res.send('get data');
 });
 
-app.get('/:file', function(req, res){
-    res.send('view item');
+app.get('/:key', function (req, res){
+  db.model('Item').find({key: req.param('key')}).one(function (result) {
+    if (result) {
+      if (result.type === 'bookmark') {
+        req.redirect(result.remote_url)
+      } else {
+        res.render(result.type + '.jade', {
+          layout: 'player',
+          locals: {
+            item: result,
+            title: result.name + ' - Raincloud'
+          }
+        });
+      }
+    } else {
+      res.send(404);
+    }
+  });
+});
+
+app.get('/:key/content', function (req, res){
+  db.model('Item').find({key: req.param('key')}).one(function (result) {
+    if (result) {
+      res.redirect(result.remoteUrl);
+    } else {
+      res.send(404);
+    }
+  });
 });
 
 
